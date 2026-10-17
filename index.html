@@ -4,13 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="A simple document editor for Bengali, English and Arabic text with A4 page preview and export options.">
+  <meta name="description" content="Write Bengali, English and Arabic documents with A4 preview and export options.">
 
   <title>Bangla Arabic Document Tool</title>
 
-  <!-- Main styles -->
   <link rel="stylesheet" href="assets/css/main.css">
   <link rel="stylesheet" href="assets/css/editor.css">
   <link rel="stylesheet" href="assets/css/preview.css">
@@ -19,48 +17,68 @@
 <body>
   <header class="app-header">
     <h1>Bangla Arabic Document Tool</h1>
-    <p>Write, format and prepare your document.</p>
+    <p>Write and format Bengali, English and Arabic documents.</p>
   </header>
 
   <main class="app-container">
 
-    <!-- Text editor -->
     <section id="editor-section" class="panel">
       <h2>Document Editor</h2>
 
-      <label for="document-text">Enter your text</label>
-
+      <label for="document-text">Your document</label>
       <textarea
         id="document-text"
-        placeholder="Type or paste Bengali, English and Arabic text here..."
+        placeholder="বাংলা লিখুন... Type English... اكتب بالعربية..."
         spellcheck="false"
       ></textarea>
     </section>
 
-    <!-- Font settings -->
     <section id="font-settings-section" class="panel">
       <h2>Font Settings</h2>
-      <p>Font controls will be added here.</p>
+
+      <label for="bengali-font-size">Bengali font size (pt)</label>
+      <input id="bengali-font-size" type="number" min="6" max="72" value="14">
+
+      <label for="english-font-size">English font size (pt)</label>
+      <input id="english-font-size" type="number" min="6" max="72" value="12">
+
+      <label for="arabic-font-size">Arabic font size (pt)</label>
+      <input id="arabic-font-size" type="number" min="6" max="72" value="18">
+
+      <button id="reset-font-settings" type="button">
+        Reset Font Sizes
+      </button>
     </section>
 
-    <!-- Page settings -->
     <section id="page-settings-section" class="panel">
       <h2>Page Settings</h2>
-      <p>A4 size, orientation and margins will be added here.</p>
+
+      <label for="page-orientation">Page orientation</label>
+      <select id="page-orientation">
+        <option value="portrait">Portrait</option>
+        <option value="landscape">Landscape</option>
+      </select>
+
+      <label for="page-margin">Page margins (mm)</label>
+      <input id="page-margin" type="number" min="0" max="50" value="20">
+
+      <label for="show-page-numbers">
+        <input id="show-page-numbers" type="checkbox">
+        Show page numbers
+      </label>
+
+      <button id="reset-page-settings" type="button">
+        Reset Page Settings
+      </button>
     </section>
 
-    <!-- Preview and export -->
     <section id="document-actions-section" class="panel">
       <h2>Preview and Download</h2>
-
-      <button id="preview-button" type="button">
-        Preview Document
-      </button>
+      <button id="preview-button" type="button">Preview Document</button>
     </section>
 
   </main>
 
-  <!-- Preview window -->
   <div id="preview-modal" class="modal" hidden>
     <div class="modal-content">
       <button id="close-preview" type="button" aria-label="Close preview">
@@ -84,7 +102,6 @@
     </div>
   </div>
 
-  <!-- JavaScript modules -->
   <script src="assets/js/language-detection.js" defer></script>
   <script src="assets/js/font-settings.js" defer></script>
   <script src="assets/js/page-layout.js" defer></script>
