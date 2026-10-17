@@ -9,103 +9,130 @@
 
   const MM_TO_PX = 96 / 25.4;
 
-  function getEditor() {
-    return document.getElementById("document-text");
+  const DEFAULT_FONTS = {
+    bengali: 14,
+    english: 12,
+    arabic: 18
+  };
+
+  function $(id) {
+    return document.getElementById(id);
   }
 
-  function getPreviewContainer() {
-    return document.getElementById("preview-content");
+  function getEditor() {
+    return $("document-text");
   }
 
   function getFontSettings() {
-    if (window.FontSettings) {
-      return window.FontSettings.getSettings();
-    }
+    return window.FontSettings.getSettings();
+  }
 
-    return {
-      bengali: {
-        fontFamily: "SolaimanLipi, serif",
-        fontSize: 14
-      },
-      arabic: {
-        fontFamily: '"Times New Roman", serif',
-        fontSize: 18
-      },
-      english: {
-        fontFamily: '"Times New Roman", serif',
-        fontSize: 12
+  function getLayout() {
+    return window.PageLayout.getLayout();
+  }
+
+  function updateFontsFromControls() {
+    const controls = [
+      ["bengali", "bengali-font-size"],
+      ["english", "english-font-size"],
+      ["arabic", "arabic-font-size"]
+    ];
+
+    controls.forEach(([language, id]) => {
+      const input = $(id);
+      if (!input) return;
+
+      const size = Number(input.value);
+
+      if (Number.isFinite(size) && size >= 6 && size <= 72) {
+        window.FontSettings.updateFontSize(language, size);
       }
-    };
+    });
+
+    renderDocument();
   }
 
-  function getPageLayout() {
-    if (window.PageLayout) {
-      return window.PageLayout.getLayout();
+  function updatePageSettings() {
+    const orientation = $("page-orientation").value;
+    const margin = Number($("page-margin").value);
+    const showPageNumbers = $("show-page-numbers").checked;
+
+    if (!Number.isFinite(margin) || margin < 0 || margin > 50) {
+      alert("Please enter a margin between 0 and 50 mm.");
+      return;
     }
 
-    return {
-      orientation: "portrait",
-      marginTop: 20,
-      marginRight: 20,
-      marginBottom: 20,
-      marginLeft: 20
-    };
+    const success = window.PageLayout.updateLayout({
+      orientation,
+      marginTop: margin,
+      marginRight: margin,
+      marginBottom: margin,
+      marginLeft: margin,
+      showPageNumbers
+    });
+
+    if (success) {
+      renderDocument();
+    }
   }
 
-  function getPageDimensions(layout) {
-    const portraitWidth = 210;
-    const portraitHeight = 297;
+  function resetFonts() {
+    window.FontSettings.resetSettings();
 
+    $("bengali-font-size").value = DEFAULT_FONTS.bengali;
+    $("english-font-size").value = DEFAULT_FONTS.english;
+    $("arabic-font-size").value = DEFAULT_FONTS.arabic;
+
+    renderDocument();
+  }
+
+  function resetPageSettings() {
+    window.PageLayout.resetLayout();
+
+    $("page-orientation").value = "portrait";
+    $("page-margin").value = 20;
+    $("show-page-numbers").checked = false;
+
+    renderDocument();
+  }
+
+  function getDimensions(layout) {
     const landscape = layout.orientation === "landscape";
-
-    const widthMm = landscape ? portraitHeight : portraitWidth;
-    const heightMm = landscape ? portraitWidth : portraitHeight;
+    const widthMm = landscape ? 297 : 210;
+    const heightMm = landscape ? 210 : 297;
 
     return {
       widthPx: widthMm * MM_TO_PX,
-      heightPx: heightMm * MM_TO_PX,
-      contentHeightPx:
-        (heightMm - layout.marginTop - layout.marginBottom) * MM_TO_PX
+      heightPx: heightMm * MM_TO_PX
     };
   }
 
   function getCharacterLanguage(character) {
-    if (window.LanguageDetection) {
-      return window.LanguageDetection.detectCharacterLanguage(character);
-    }
-
-    return /[\u0980-\u09FF]/.test(character)
-      ? "bengali"
-      : /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(character)
-        ? "arabic"
-        : /[A-Za-z]/.test(character)
-          ? "english"
-          : "other";
+    return window.LanguageDetection
+      .detectCharacterLanguage(character);
   }
 
   function splitIntoRuns(text) {
     const characters = Array.from(text);
     const runs = [];
 
-    for (let i = 0; i < characters.length; i++) {
-      const character = characters[i];
+    characters.forEach((character) => {
       let language = getCharacterLanguage(character);
 
-      // Keep punctuation and spaces with a neighboring text run.
       if (language === "other") {
         language = runs.length
           ? runs[runs.length - 1].language
-          : "other";
+          : "english";
       }
 
-      const lastRun = runs[runs.length - 1];
+      const last = runs[runs.length - 1];
 
-      if (lastRun && lastRun.language === language) {
-        lastRun.text += character;
+      if (last && last.language === language) {
+        last.text += character;
       } else {
         runs.push({ language, text: character });
       }
-    }
+    });
 
     return runs;
   }
@@ -119,13 +146,12 @@
     paragraph.style.overflowWrap = "anywhere";
     paragraph.style.lineHeight = "1.6";
 
-    const runs = splitIntoRuns(text);
-
-    runs.forEach((run) => {
-      const span = document.createElement("span");
+    splitIntoRuns(text).forEach((run) => {
       const language = settings[run.language]
         ? run.language
         : "english";
+
+      const span = document.createElement("span");
 
       span.textContent = run.text;
       span.style.fontFamily = settings[language].fontFamily;
@@ -158,56 +184,68 @@
     page.style.width = dimensions.widthPx + "px";
     page.style.height = dimensions.heightPx + "px";
     page.style.boxSizing = "border-box";
+    page.style.flexShrink = "0";
     page.style.padding = [
       layout.marginTop,
       layout.marginRight,
       layout.marginBottom,
       layout.marginLeft
-    ].map((margin) => margin * MM_TO_PX + "px").join(" ");
+    ].map((value) => value * MM_TO_PX + "px").join(" ");
 
     page.style.margin = "0 auto 16px";
-    page.style.background = "#ffffff";
-    page.style.color = "#000000";
+    page.style.background = "#fff";
+    page.style.color = "#000";
     page.style.overflow = "hidden";
     page.style.position = "relative";
-    page.style.boxShadow = "0 2px 10px rgba(0,0,0,0.12)";
+
+    if (layout.showPageNumbers) {
+      const number = document.createElement("div");
+      number.className = "document-page-number";
+      number.textContent = String(pageNumber);
+      number.style.position = "absolute";
+      number.style.bottom = Math.max(4, layout.marginBottom / 2) * MM_TO_PX + "px";
+      number.style.left = "0";
+      number.style.right = "0";
+      number.style.textAlign = "center";
+      number.style.fontSize = "10pt";
+      number.style.color = "#555";
+      page.appendChild(number);
+    }
 
     return page;
   }
 
   function renderDocument() {
     const editor = getEditor();
-    const container = getPreviewContainer();
+    const container = $("preview-content");
 
     if (!editor || !container) return;
 
     const text = editor.value;
     const settings = getFontSettings();
-    const layout = getPageLayout();
-    const dimensions = getPageDimensions(layout);
+    const layout = getLayout();
+    const dimensions = getDimensions(layout);
 
     container.replaceChildren();
 
-    if (!text.trim()) return;
+    if (!text.trim()) {
+      container.dataset.pageCount = "0";
+      return;
+    }
 
-    const pageContentHeight = dimensions.contentHeightPx;
+    const lines = text.split("\n");
     let pageNumber = 1;
     let page = createPage(layout, dimensions, pageNumber);
 
     container.appendChild(page);
 
-    const lines = text.split("\n");
-
     lines.forEach((line) => {
       const paragraph = createParagraph(line, settings);
-
       page.appendChild(paragraph);
 
-      // Move a paragraph to the next page if it overflows
-      // and the current page already contains other content.
       if (
-        page.scrollHeight > page.clientHeight + 1 &&
-        page.children.length > 1
+        page.scrollHeight > page.clientHeight &&
+        page.children.length > (layout.showPageNumbers ? 2 : 1)
       ) {
         page.removeChild(paragraph);
 
@@ -218,9 +256,7 @@
       }
     });
 
-    // Leave enough space for the page's bottom margin.
     container.dataset.pageCount = String(pageNumber);
-    container.dataset.contentHeight = String(pageContentHeight);
   }
 
   function initialize() {
@@ -230,7 +266,22 @@
 
     editor.addEventListener("input", renderDocument);
 
-    // Render existing text if the editor is already populated.
+    [
+      "bengali-font-size",
+      "english-font-size",
+      "arabic-font-size"
+    ].forEach((id) => {
+      $(id).addEventListener("change", updateFontsFromControls);
+    });
+
+    ["page-orientation", "page-margin", "show-page-numbers"]
+      .forEach((id) => {
+        $(id).addEventListener("change", updatePageSettings);
+      });
+
+    $("reset-font-settings").addEventListener("click", resetFonts);
+    $("reset-page-settings").addEventListener("click", resetPageSettings);
+
     renderDocument();
   }
 
