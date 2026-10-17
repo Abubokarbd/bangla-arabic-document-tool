@@ -3,7 +3,8 @@
    PDF Export Module
    File: assets/js/pdf-export.js
 
-   Downloads PDF directly.
+   Exports existing document pages
+   without adding duplicate margins.
    ================================= */
 
 (function () {
@@ -21,13 +22,17 @@
       return;
     }
 
-    if (!content.innerHTML.trim()) {
+    const pages = Array.from(
+      content.querySelectorAll(".document-page")
+    );
+
+    if (!pages.length || !content.textContent.trim()) {
       alert("There is no document to export yet.");
       return;
     }
 
     if (typeof window.html2pdf !== "function") {
-      alert("PDF library did not load. Please refresh the page and try again.");
+      alert("PDF library did not load. Please refresh and try again.");
       return;
     }
 
@@ -35,79 +40,103 @@
       ? window.PageLayout.getLayout()
       : {
           paperSize: "A4",
-          orientation: "portrait",
-          marginTop: 20,
-          marginRight: 20,
-          marginBottom: 20,
-          marginLeft: 20
+          orientation: "portrait"
         };
 
-    const pages = content.querySelectorAll(".document-page");
-
-    const paperSize = String(layout.paperSize || "A4").toLowerCase();
     const orientation =
-      String(layout.orientation || "portrait").toLowerCase() === "landscape"
+      layout.orientation === "landscape"
         ? "landscape"
         : "portrait";
 
-    const margin = [
-      Number(layout.marginTop ?? 20),
-      Number(layout.marginRight ?? 20),
-      Number(layout.marginBottom ?? 20),
-      Number(layout.marginLeft ?? 20)
-    ];
+    const exportArea = document.createElement("div");
+
+    exportArea.id = "pdf-export-temporary";
+    exportArea.style.position = "fixed";
+    exportArea.style.left = "-100000px";
+    exportArea.style.top = "0";
+    exportArea.style.width =
+      orientation === "landscape" ? "1122.52px" : "793.70px";
+    exportArea.style.margin = "0";
+    exportArea.style.padding = "0";
+    exportArea.style.background = "#ffffff";
+    exportArea.style.color = "#000000";
+
+    pages.forEach(function (originalPage, index) {
+      const page = originalPage.cloneNode(true);
+
+      page.style.transform = "none";
+      page.style.width =
+        orientation === "landscape" ? "1122.52px" : "793.70px";
+      page.style.height =
+        orientation === "landscape" ? "793.70px" : "1122.52px";
+      page.style.minHeight = "0";
+      page.style.maxHeight = "none";
+      page.style.margin = "0";
+      page.style.boxSizing = "border-box";
+      page.style.overflow = "hidden";
+      page.style.boxShadow = "none";
+      page.style.breakInside = "avoid";
+      page.style.pageBreakInside = "avoid";
+      page.style.breakAfter =
+        index < pages.length - 1 ? "page" : "auto";
+      page.style.pageBreakAfter =
+        index < pages.length - 1 ? "always" : "auto";
+
+      exportArea.appendChild(page);
+    });
+
+    document.body.appendChild(exportArea);
 
     const options = {
-      margin: margin,
+      margin: 0,
       filename: "bangla-arabic-document.pdf",
       image: {
         type: "jpeg",
-        quality: 0.98
+        quality: 1
       },
       html2canvas: {
         scale: 2,
-        useCORS: true,
         backgroundColor: "#ffffff",
-        logging: false
+        useCORS: true,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
       },
       jsPDF: {
         unit: "mm",
-        format: paperSize,
-        orientation: orientation
+        format: "a4",
+        orientation: orientation,
+        compress: true
       },
       pagebreak: {
-        mode: ["css", "legacy"],
-        after: ".document-page"
+        mode: ["css"]
       }
     };
 
-    const exportArea = document.createElement("div");
-    exportArea.style.background = "#ffffff";
-    exportArea.style.color = "#000000";
-    exportArea.style.width = "100%";
+    const button = document.getElementById("download-pdf");
 
-    exportArea.innerHTML = content.innerHTML;
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Preparing PDF...";
+    }
 
-    exportArea.querySelectorAll(".document-page").forEach(function (page) {
-      page.style.breakAfter = "page";
-      page.style.pageBreakAfter = "always";
-      page.style.overflow = "visible";
-      page.style.boxSizing = "border-box";
-    });
+    function cleanup() {
+      exportArea.remove();
 
-    const lastPage = exportArea.querySelector(".document-page:last-child");
-
-    if (lastPage) {
-      lastPage.style.breakAfter = "auto";
-      lastPage.style.pageBreakAfter = "auto";
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Download PDF";
+      }
     }
 
     window.html2pdf()
       .set(options)
       .from(exportArea)
       .save()
+      .then(cleanup)
       .catch(function (error) {
         console.error("PDF export failed:", error);
+        cleanup();
         alert("PDF download failed. Please try again.");
       });
   }
