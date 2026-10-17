@@ -3,8 +3,7 @@
    PDF Export Module
    File: assets/js/pdf-export.js
 
-   Uses the browser's print dialog.
-   Users can choose "Save as PDF".
+   Downloads PDF directly.
    ================================= */
 
 (function () {
@@ -14,12 +13,22 @@
     return document.getElementById("preview-content");
   }
 
-  function buildPrintDocument(content) {
-    const printWindow = window.open("", "_blank");
+  function downloadPDF() {
+    const content = getPreviewContent();
 
-    if (!printWindow) {
-      alert("Please allow pop-ups to export your document.");
-      return false;
+    if (!content) {
+      alert("The document preview could not be found.");
+      return;
+    }
+
+    if (!content.innerHTML.trim()) {
+      alert("There is no document to export yet.");
+      return;
+    }
+
+    if (typeof window.html2pdf !== "function") {
+      alert("PDF library did not load. Please refresh the page and try again.");
+      return;
     }
 
     const layout = window.PageLayout
@@ -34,105 +43,80 @@
         };
 
     const pages = content.querySelectorAll(".document-page");
-    const documentHTML = content.innerHTML.trim();
 
-    if (!documentHTML) {
-      printWindow.close();
-      alert("There is no document to export yet.");
-      return false;
-    }
+    const paperSize = String(layout.paperSize || "A4").toLowerCase();
+    const orientation =
+      String(layout.orientation || "portrait").toLowerCase() === "landscape"
+        ? "landscape"
+        : "portrait";
 
-    const pageHTML = pages.length
-      ? documentHTML
-      : `<div class="document-page">${documentHTML}</div>`;
+    const margin = [
+      Number(layout.marginTop ?? 20),
+      Number(layout.marginRight ?? 20),
+      Number(layout.marginBottom ?? 20),
+      Number(layout.marginLeft ?? 20)
+    ];
 
-    printWindow.document.open();
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-        <title>Document PDF Export</title>
-
-        <style>
-          @page {
-            size: A4 ${layout.orientation};
-            margin:
-              ${layout.marginTop}mm
-              ${layout.marginRight}mm
-              ${layout.marginBottom}mm
-              ${layout.marginLeft}mm;
-          }
-
-          * {
-            box-sizing: border-box;
-          }
-
-          body {
-            margin: 0;
-            color: #000;
-            background: #fff;
-            font-family: "Times New Roman", serif;
-          }
-
-          .document-page {
-            width: 100%;
-            min-height: 1px;
-            background: #fff;
-            color: #000;
-            overflow-wrap: anywhere;
-            break-after: page;
-            page-break-after: always;
-          }
-
-          .document-page:last-child {
-            break-after: auto;
-            page-break-after: auto;
-          }
-
-          @media print {
-            body {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-          }
-        </style>
-      </head>
-
-      <body>
-        <main id="print-document">${pageHTML}</main>
-      </body>
-      </html>
-    `);
-
-    printWindow.document.close();
-
-    printWindow.onload = function () {
-      printWindow.focus();
-      printWindow.print();
+    const options = {
+      margin: margin,
+      filename: "bangla-arabic-document.pdf",
+      image: {
+        type: "jpeg",
+        quality: 0.98
+      },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false
+      },
+      jsPDF: {
+        unit: "mm",
+        format: paperSize,
+        orientation: orientation
+      },
+      pagebreak: {
+        mode: ["css", "legacy"],
+        after: ".document-page"
+      }
     };
 
-    return true;
-  }
+    const exportArea = document.createElement("div");
+    exportArea.style.background = "#ffffff";
+    exportArea.style.color = "#000000";
+    exportArea.style.width = "100%";
 
-  function downloadPDF() {
-    const content = getPreviewContent();
+    exportArea.innerHTML = content.innerHTML;
 
-    if (!content) {
-      alert("The document preview could not be found.");
-      return;
+    exportArea.querySelectorAll(".document-page").forEach(function (page) {
+      page.style.breakAfter = "page";
+      page.style.pageBreakAfter = "always";
+      page.style.overflow = "visible";
+      page.style.boxSizing = "border-box";
+    });
+
+    const lastPage = exportArea.querySelector(".document-page:last-child");
+
+    if (lastPage) {
+      lastPage.style.breakAfter = "auto";
+      lastPage.style.pageBreakAfter = "auto";
     }
 
-    buildPrintDocument(content);
+    window.html2pdf()
+      .set(options)
+      .from(exportArea)
+      .save()
+      .catch(function (error) {
+        console.error("PDF export failed:", error);
+        alert("PDF download failed. Please try again.");
+      });
   }
 
   function initialize() {
     const button = document.getElementById("download-pdf");
 
-    if (button) {
+    if (button && !button.dataset.pdfExportInitialized) {
+      button.dataset.pdfExportInitialized = "true";
       button.addEventListener("click", downloadPDF);
     }
   }
