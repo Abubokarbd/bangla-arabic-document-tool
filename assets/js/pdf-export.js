@@ -52,8 +52,9 @@
 
     exportArea.id = "pdf-export-temporary";
     exportArea.style.position = "fixed";
-    exportArea.style.left = "-100000px";
-    exportArea.style.top = "0";
+   exportArea.style.left = "0";
+   exportArea.style.top = "0";
+   exportArea.style.zIndex = "99999";
     exportArea.style.width =
       orientation === "landscape" ? "1122.52px" : "793.70px";
     exportArea.style.margin = "0";
