@@ -1,0 +1,130 @@
+
+/* =================================
+   Document Preview Styles
+   File: assets/css/preview.css
+   ================================= */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  width: min(100%, 1000px);
+  max-height: 94vh;
+  padding: 20px;
+
+  background: #f4f6f5;
+  border-radius: 12px;
+  box-shadow: 0 8px 35px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.modal-content h2 {
+  margin: 0 45px 16px 0;
+  font-size: 20px;
+}
+
+#close-preview {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+
+  color: #222;
+  background: #e5e9e7;
+  border-radius: 50%;
+  font-size: 28px;
+  line-height: 1;
+}
+
+#close-preview:hover {
+  background: #d5dcd8;
+}
+
+#preview-content {
+  flex: 1;
+  min-height: 120px;
+  padding: 16px;
+
+  background: #dfe4e1;
+  border: 1px solid #cbd3ce;
+  border-radius: 8px;
+
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.preview-controls,
+.export-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.preview-controls button {
+  min-width: 60px;
+}
+
+.export-controls button {
+  flex: 1;
+  min-width: 130px;
+}
+
+#download-png {
+  background: #4b5962;
+}
+
+#download-png:hover {
+  background: #35434c;
+}
+
+@media (max-width: 600px) {
+  .modal {
+    padding: 6px;
+  }
+
+  .modal-content {
+    max-height: 98vh;
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .modal-content h2 {
+    margin-bottom: 12px;
+    font-size: 18px;
+  }
+
+  #preview-content {
+    padding: 8px;
+  }
+
+  .preview-controls,
+  .export-controls {
+    gap: 7px;
+    padding-top: 10px;
+  }
+
+  .export-controls button {
+    min-width: 110px;
+    padding: 9px;
+    font-size: 14px;
+  }
+}
