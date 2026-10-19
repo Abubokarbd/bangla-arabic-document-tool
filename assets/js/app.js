@@ -215,49 +215,96 @@
     return page;
   }
 
-  function renderDocument() {
-    const editor = getEditor();
-    const container = $("preview-content");
+ function renderDocument() {
+  const editor = getEditor();
+  const container = $("preview-content");
 
-    if (!editor || !container) return;
+  if (!editor || !container) return;
 
-    const text = editor.value;
-    const settings = getFontSettings();
-    const layout = getLayout();
-    const dimensions = getDimensions(layout);
+  const text = editor.value;
+  const settings = getFontSettings();
+  const layout = getLayout();
+  const dimensions = getDimensions(layout);
 
-    container.replaceChildren();
+  container.replaceChildren();
 
-    if (!text.trim()) {
-      container.dataset.pageCount = "0";
-      return;
-    }
+  if (!text.trim()) {
+    container.dataset.pageCount = "0";
+    return;
+  }
 
-    const lines = text.split("\n");
-    let pageNumber = 1;
-    let page = createPage(layout, dimensions, pageNumber);
+  let pageNumber = 1;
+  let page = createPage(layout, dimensions, pageNumber);
 
+  container.appendChild(page);
+
+  function createNextPage() {
+    pageNumber++;
+    page = createPage(layout, dimensions, pageNumber);
     container.appendChild(page);
+  }
 
-    lines.forEach((line) => {
-      const paragraph = createParagraph(line, settings);
+  function isOverflowing() {
+    return page.scrollHeight > page.clientHeight + 1;
+  }
+
+  function addLine(line) {
+    let paragraph = createParagraph(line, settings);
+    page.appendChild(paragraph);
+
+    if (!isOverflowing()) return;
+
+    page.removeChild(paragraph);
+
+    // প্রথমে সম্পূর্ণ অনুচ্ছেদটি নতুন পৃষ্ঠায় নেওয়ার চেষ্টা।
+    if (page.querySelector("p")) {
+      createNextPage();
       page.appendChild(paragraph);
 
-      if (
-        page.scrollHeight > page.clientHeight &&
-        page.children.length > (layout.showPageNumbers ? 2 : 1)
-      ) {
-        page.removeChild(paragraph);
+      if (!isOverflowing()) return;
 
-        pageNumber++;
-        page = createPage(layout, dimensions, pageNumber);
-        container.appendChild(page);
-        page.appendChild(paragraph);
+      page.removeChild(paragraph);
+    }
+
+    // দীর্ঘ অনুচ্ছেদ শব্দ অনুযায়ী ছোট অংশে ভাগ করা।
+    const tokens = line.match(/\S+\s*|\s+/g) || [""];
+    let chunk = "";
+    let currentParagraph = null;
+
+    for (const token of tokens) {
+      const candidateText = chunk + token;
+      const candidate = createParagraph(candidateText, settings);
+
+      if (currentParagraph) {
+        page.removeChild(currentParagraph);
       }
-    });
 
-    container.dataset.pageCount = String(pageNumber);
+      page.appendChild(candidate);
+
+      if (isOverflowing()) {
+        page.removeChild(candidate);
+
+        if (chunk) {
+          currentParagraph = createParagraph(chunk, settings);
+          page.appendChild(currentParagraph);
+        }
+
+        createNextPage();
+
+        chunk = token;
+        currentParagraph = createParagraph(chunk, settings);
+        page.appendChild(currentParagraph);
+      } else {
+        chunk = candidateText;
+        currentParagraph = candidate;
+      }
+    }
   }
+
+  text.split("\n").forEach(addLine);
+
+  container.dataset.pageCount = String(pageNumber);
+}
 
   function initialize() {
     const editor = getEditor();
