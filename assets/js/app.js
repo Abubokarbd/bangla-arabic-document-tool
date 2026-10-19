@@ -245,8 +245,20 @@
   }
 
   function isOverflowing() {
-    return page.scrollHeight > page.clientHeight + 1;
-  }
+  const paragraphs = page.querySelectorAll("p");
+
+  if (!paragraphs.length) return false;
+
+  const lastParagraph = paragraphs[paragraphs.length - 1];
+  const pageRect = page.getBoundingClientRect();
+  const paragraphRect = lastParagraph.getBoundingClientRect();
+  const styles = window.getComputedStyle(page);
+  const bottomPadding = parseFloat(styles.paddingBottom) || 0;
+
+  const contentBottom = pageRect.bottom - bottomPadding;
+
+  return paragraphRect.bottom > contentBottom + 1;
+}
 
   function addLine(line) {
     let paragraph = createParagraph(line, settings);
